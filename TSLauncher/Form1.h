@@ -1,5 +1,5 @@
 #pragma once
-
+#pragma comment(lib, "Advapi32.lib")
 #define _CRT_SECURE_NO_WARNINGS
 #define WIN32_LEAN_AND_MEAN
 #include "stdio.h"
@@ -9,6 +9,7 @@
 #include <msclr/marshal.h>
 #include <msclr/marshal_cppstd.h>
 #include <string>
+#include <iostream>
 
 #define CH_BOX_BIT_LOGMATE 0
 #define CH_BOX_BIT_LUA_DEBUG 1
@@ -44,6 +45,7 @@
 #endif
 
 
+
 namespace CppCLRWinFormsProject {
 
 	using namespace System;
@@ -72,6 +74,13 @@ namespace CppCLRWinFormsProject {
 			this->panelDevState = false;
 			puts("deez");
 #endif
+			if (!this->SetStringToRegistry("SOFTWARE\\WOW6432Node\\railsimulator.com\\railworks", "installer_store", "Hi"))
+			{
+				puts("failed to store");
+			}
+			this->rwPath = this->ReadStringFromRegistry("SOFTWARE\\WOW6432Node\\railsimulator.com\\railworks", "install_path");
+			printf("Read rw path from Reg as : %s\n", this->rwPath);
+
 			//TODO: Add the constructor code here
 			//
 		}
@@ -87,34 +96,60 @@ namespace CppCLRWinFormsProject {
 				delete components;
 			}
 		}
+
+
+	private: char* ReadStringFromRegistry(const char* keyPath, const char* valueName) {
+		HKEY hKey;
+		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyPath, 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
+			std::cout << "Failed to open registry key." << std::endl;
+			return nullptr;
+		}
+
+		DWORD dataSize = 0;
+		if (RegQueryValueExA(hKey, valueName, nullptr, nullptr, nullptr, &dataSize) != ERROR_SUCCESS) {
+			std::cout << "Failed to get the size of registry value." << std::endl;
+			RegCloseKey(hKey);
+			return nullptr;
+		}
+
+		char* data = new char[dataSize];
+
+		if (RegQueryValueExA(hKey, valueName, nullptr, nullptr, reinterpret_cast<BYTE*>(data), &dataSize) != ERROR_SUCCESS) {
+			std::cout << "Failed to read registry value." << std::endl;
+			delete[] data;
+			RegCloseKey(hKey);
+			return nullptr;
+		}
+
+		RegCloseKey(hKey);
+
+		return data;
+	}
+	private: bool SetStringToRegistry(const char* keyPath, const char* valueName, const char* data) {
+			HKEY hKey;
+			if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyPath, 0, KEY_WRITE, &hKey) != ERROR_SUCCESS) {
+				std::cout << "Failed to open registry key." << std::endl;
+				return false;
+			}
+			if (RegSetValueExA(hKey, valueName, 0, REG_SZ, reinterpret_cast<const BYTE*>(data), static_cast<DWORD>(strlen(data) + 1)) != ERROR_SUCCESS) {
+				std::cout << "Failed to write registry value." << std::endl;
+				RegCloseKey(hKey);
+				return false;
+			}
+			RegCloseKey(hKey);
+			return true;
+		}
+	private: char* rwPath;
 	private: bool panelDevState;
 	private: uint32_t argFlags;
 	private: char* logmateFilters;
 	private: System::Windows::Forms::Button^ LaunchBit32;
 	private: System::Windows::Forms::CheckedListBox^ checkboxesUser;
 	protected:
-
 	protected:
-
-
 	private: System::Windows::Forms::Button^ launchBit64;
 	private: System::Windows::Forms::Button^ launchDX12;
 	private: System::Windows::Forms::Button^ toggleDev;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	private: System::Windows::Forms::TextBox^ textBox2;
 	private: System::Windows::Forms::Label^ labelLogmateFilter;
 	private: System::Windows::Forms::Panel^ panelDev;
@@ -124,7 +159,6 @@ namespace CppCLRWinFormsProject {
 	private: System::Windows::Forms::CheckBox^ chBoxNoBpCache;
 	private: System::Windows::Forms::CheckBox^ chBoxSoundDialog;
 	private: System::Windows::Forms::CheckBox^ chBoxControlDialog;
-
 
 	protected:
 
