@@ -6,10 +6,16 @@
 #include "Windows.h"
 #include "stdint.h"
 #include "string.h"
+#include "stdlib.h"
 #include <msclr/marshal.h>
 #include <msclr/marshal_cppstd.h>
 #include <string>
 #include <iostream>
+
+#define RW_REG_KEY_PATH "SOFTWARE\\WOW6432Node\\railsimulator.com\\railworks"
+
+#define REG_STORE_SERIALISE_OUT(str) sprintf(str, "%d,%d", (int) this->panelDevState, this->argFlags );
+#define REG_STORE_SERIALISE_IN(str)  sscanf(str, "%d,%d", &this->panelDevState, &this->argFlags);
 
 #define CH_BOX_BIT_LOGMATE 0
 #define CH_BOX_BIT_LUA_DEBUG 1
@@ -71,16 +77,20 @@ namespace CppCLRWinFormsProject {
 				freopen("CONOUT$", "w", stdout);
 				//printf(" printing to console");
 			}
-			this->panelDevState = false;
+			
 			puts("deez");
 #endif
-			if (!this->SetStringToRegistry("SOFTWARE\\WOW6432Node\\railsimulator.com\\railworks", "installer_store", "Hi"))
-			{
-				puts("failed to store");
-			}
-			this->rwPath = this->ReadStringFromRegistry("SOFTWARE\\WOW6432Node\\railsimulator.com\\railworks", "install_path");
+
+			//this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", "Hi")
+			char* temp = (char*) malloc(4096);
+			temp = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "launcher_store");
+			REG_STORE_SERIALISE_IN(temp);
+			this->rwPath = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "install_path");
 			printf("Read rw path from Reg as : %s\n", this->rwPath);
 
+
+			if (this->panelDevState)
+				this->panelDev->Show();
 			//TODO: Add the constructor code here
 			//
 		}
@@ -501,6 +511,9 @@ private: System::Void checkedListBox2_OnItemCheck(System::Object^ sender, System
 	private: System::Void toggleDev_Click(System::Object^ sender, System::EventArgs^ e) {
 		this->panelDevState = !this->panelDevState;
 		puts("toggling dev panel");
+		char* ser = (char*) malloc(2048);
+		REG_STORE_SERIALISE_OUT(ser);
+		this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", ser);
 		if (this->panelDevState)
 		{
 			this->panelDev->Show();
