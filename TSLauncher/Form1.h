@@ -1,9 +1,47 @@
 #pragma once
+
 #define _CRT_SECURE_NO_WARNINGS
 #define WIN32_LEAN_AND_MEAN
 #include "stdio.h"
 #include "Windows.h"
 #include "stdint.h"
+#include "string.h"
+#include <msclr/marshal.h>
+#include <msclr/marshal_cppstd.h>
+#include <string>
+
+#define CH_BOX_BIT_LOGMATE 0
+#define CH_BOX_BIT_LUA_DEBUG 1
+#define CH_BOX_BIT_CTRL_DIALOG 2
+#define CH_BOX_BIT_SOUND_DIALOG 3
+#define CH_BOX_BIT_NO_BP_CACHE 4
+#define CH_BOX_BIT_ 5
+
+#ifdef _DEBUG
+	#define CH_BOX_SET_BIT(argFlags, bit, sender) \
+		CheckBox^ checkBox = dynamic_cast<CheckBox^>(sender); \
+		if (checkBox->Checked) { \
+			(argFlags) |= (1 << (bit)); \
+		} else { \
+			(argFlags) &= ~(1 << (bit)); \
+		} \
+		printf("Value of the store is now %d\n", argFlags); 
+#define TEXT_BOX_STORE_FROM_EVENT(location, sender) \
+	TextBox^ textBox = dynamic_cast<TextBox^>(sender); \
+	String^ text = textBox->Text; \
+	msclr::interop::marshal_context context; \
+	const char* charPtr = context.marshal_as<const char*>(text); \
+	location = _strdup(charPtr); \
+	printf("Text box changed to : %s\n", location);
+#else
+	#define CH_BOX_SET_BIT(argFlags, bit, sender) \
+		CheckBox^ checkBox = dynamic_cast<CheckBox^>(sender); \
+		if (checkBox->Checked) { \
+			(argFlags) |= (1 << (bit)); \
+		} else { \
+			(argFlags) &= ~(1 << (bit)); \
+		} 
+#endif
 
 
 namespace CppCLRWinFormsProject {
@@ -24,16 +62,16 @@ namespace CppCLRWinFormsProject {
 		Form1(void)
 		{
 			InitializeComponent();
+#ifdef _DEBUG
 			bool chk = AllocConsole();
 			if (chk)
 			{
 				freopen("CONOUT$", "w", stdout);
 				//printf(" printing to console");
 			}
-			this->checkboxesDev->CheckOnClick = false;
-			this->checkboxesUser->CheckOnClick = false;
 			this->panelDevState = false;
 			puts("deez");
+#endif
 			//TODO: Add the constructor code here
 			//
 		}
@@ -50,8 +88,8 @@ namespace CppCLRWinFormsProject {
 			}
 		}
 	private: bool panelDevState;
-	private: uint32_t flagsDevField;
-	private: uint32_t flagsUserField;
+	private: uint32_t argFlags;
+	private: char* logmateFilters;
 	private: System::Windows::Forms::Button^ LaunchBit32;
 	private: System::Windows::Forms::CheckedListBox^ checkboxesUser;
 	protected:
@@ -62,8 +100,8 @@ namespace CppCLRWinFormsProject {
 	private: System::Windows::Forms::Button^ launchBit64;
 	private: System::Windows::Forms::Button^ launchDX12;
 	private: System::Windows::Forms::Button^ toggleDev;
-	private: System::Windows::Forms::CheckedListBox^ checkboxesDev;
-	private: System::Windows::Forms::TextBox^ textLogmateFilters;
+
+
 
 
 
@@ -80,7 +118,14 @@ namespace CppCLRWinFormsProject {
 	private: System::Windows::Forms::TextBox^ textBox2;
 	private: System::Windows::Forms::Label^ labelLogmateFilter;
 	private: System::Windows::Forms::Panel^ panelDev;
-	private: System::Windows::Forms::CheckBox^ checkBox1;
+	private: System::Windows::Forms::CheckBox^ chBoxLogmate;
+	private: System::Windows::Forms::CheckBox^ chBoxLuaDebug;
+	private: System::Windows::Forms::TextBox^ textLogmateFilters;
+	private: System::Windows::Forms::CheckBox^ chBoxNoBpCache;
+	private: System::Windows::Forms::CheckBox^ chBoxSoundDialog;
+	private: System::Windows::Forms::CheckBox^ chBoxControlDialog;
+
+
 	protected:
 
 	private:
@@ -104,11 +149,14 @@ namespace CppCLRWinFormsProject {
 			this->launchBit64 = (gcnew System::Windows::Forms::Button());
 			this->launchDX12 = (gcnew System::Windows::Forms::Button());
 			this->toggleDev = (gcnew System::Windows::Forms::Button());
-			this->checkboxesDev = (gcnew System::Windows::Forms::CheckedListBox());
-			this->textLogmateFilters = (gcnew System::Windows::Forms::TextBox());
 			this->textBox2 = (gcnew System::Windows::Forms::TextBox());
 			this->panelDev = (gcnew System::Windows::Forms::Panel());
-			this->checkBox1 = (gcnew System::Windows::Forms::CheckBox());
+			this->chBoxNoBpCache = (gcnew System::Windows::Forms::CheckBox());
+			this->chBoxSoundDialog = (gcnew System::Windows::Forms::CheckBox());
+			this->chBoxControlDialog = (gcnew System::Windows::Forms::CheckBox());
+			this->chBoxLuaDebug = (gcnew System::Windows::Forms::CheckBox());
+			this->textLogmateFilters = (gcnew System::Windows::Forms::TextBox());
+			this->chBoxLogmate = (gcnew System::Windows::Forms::CheckBox());
 			title = (gcnew System::Windows::Forms::Label());
 			labelFPSLimit = (gcnew System::Windows::Forms::Label());
 			this->panelDev->SuspendLayout();
@@ -193,26 +241,6 @@ namespace CppCLRWinFormsProject {
 			this->toggleDev->UseVisualStyleBackColor = true;
 			this->toggleDev->Click += gcnew System::EventHandler(this, &Form1::toggleDev_Click);
 			// 
-			// checkboxesDev
-			// 
-			this->checkboxesDev->FormattingEnabled = true;
-			this->checkboxesDev->Items->AddRange(gcnew cli::array< System::Object^  >(5) {
-				L"Logmate", L"Lua Debug Messages", L"Control State Dialog",
-					L"Sound Debug Dialog", L"Dont Use Blueprint Cache"
-			});
-			this->checkboxesDev->Location = System::Drawing::Point(0, 72);
-			this->checkboxesDev->Name = L"checkboxesDev";
-			this->checkboxesDev->Size = System::Drawing::Size(184, 139);
-			this->checkboxesDev->TabIndex = 5;
-			this->checkboxesDev->SelectedIndexChanged += gcnew System::EventHandler(this, &Form1::checkedListBox2_SelectedIndexChanged);
-			// 
-			// textLogmateFilters
-			// 
-			this->textLogmateFilters->Location = System::Drawing::Point(0, 32);
-			this->textLogmateFilters->Name = L"textLogmateFilters";
-			this->textLogmateFilters->Size = System::Drawing::Size(184, 20);
-			this->textLogmateFilters->TabIndex = 6;
-			// 
 			// textBox2
 			// 
 			this->textBox2->Location = System::Drawing::Point(32, 384);
@@ -222,8 +250,12 @@ namespace CppCLRWinFormsProject {
 			// 
 			// panelDev
 			// 
-			this->panelDev->Controls->Add(this->checkboxesDev);
+			this->panelDev->Controls->Add(this->chBoxNoBpCache);
+			this->panelDev->Controls->Add(this->chBoxSoundDialog);
+			this->panelDev->Controls->Add(this->chBoxControlDialog);
+			this->panelDev->Controls->Add(this->chBoxLuaDebug);
 			this->panelDev->Controls->Add(this->textLogmateFilters);
+			this->panelDev->Controls->Add(this->chBoxLogmate);
 			this->panelDev->Controls->Add(this->labelLogmateFilter);
 			this->panelDev->Location = System::Drawing::Point(232, 208);
 			this->panelDev->Name = L"panelDev";
@@ -231,16 +263,68 @@ namespace CppCLRWinFormsProject {
 			this->panelDev->TabIndex = 11;
 			this->panelDev->Visible = false;
 			// 
-			// checkBox1
+			// chBoxNoBpCache
 			// 
-			this->checkBox1->AutoSize = true;
-			this->checkBox1->Location = System::Drawing::Point(232, 184);
-			this->checkBox1->Name = L"checkBox1";
-			this->checkBox1->Size = System::Drawing::Size(80, 17);
-			this->checkBox1->TabIndex = 12;
-			this->checkBox1->Text = L"checkBox1";
-			this->checkBox1->UseVisualStyleBackColor = true;
-			this->checkBox1->CheckedChanged += gcnew System::EventHandler(this, &Form1::checkBox1_CheckedChanged);
+			this->chBoxNoBpCache->AutoSize = true;
+			this->chBoxNoBpCache->Location = System::Drawing::Point(0, 160);
+			this->chBoxNoBpCache->Name = L"chBoxNoBpCache";
+			this->chBoxNoBpCache->Size = System::Drawing::Size(149, 17);
+			this->chBoxNoBpCache->TabIndex = 16;
+			this->chBoxNoBpCache->Text = L"Dont Use Blueprint Cache";
+			this->chBoxNoBpCache->UseVisualStyleBackColor = true;
+			this->chBoxNoBpCache->CheckedChanged += gcnew System::EventHandler(this, &Form1::chBoxNoBpCache_CheckedChanged);
+			// 
+			// chBoxSoundDialog
+			// 
+			this->chBoxSoundDialog->AutoSize = true;
+			this->chBoxSoundDialog->Location = System::Drawing::Point(0, 136);
+			this->chBoxSoundDialog->Name = L"chBoxSoundDialog";
+			this->chBoxSoundDialog->Size = System::Drawing::Size(125, 17);
+			this->chBoxSoundDialog->TabIndex = 15;
+			this->chBoxSoundDialog->Text = L"Sound Debug Dialog";
+			this->chBoxSoundDialog->UseVisualStyleBackColor = true;
+			this->chBoxSoundDialog->CheckedChanged += gcnew System::EventHandler(this, &Form1::chBoxSoundDialog_CheckedChanged);
+			// 
+			// chBoxControlDialog
+			// 
+			this->chBoxControlDialog->AutoSize = true;
+			this->chBoxControlDialog->Location = System::Drawing::Point(0, 112);
+			this->chBoxControlDialog->Name = L"chBoxControlDialog";
+			this->chBoxControlDialog->Size = System::Drawing::Size(120, 17);
+			this->chBoxControlDialog->TabIndex = 14;
+			this->chBoxControlDialog->Text = L"Control State Dialog";
+			this->chBoxControlDialog->UseVisualStyleBackColor = true;
+			this->chBoxControlDialog->CheckedChanged += gcnew System::EventHandler(this, &Form1::chBoxControlDialog_CheckedChanged);
+			// 
+			// chBoxLuaDebug
+			// 
+			this->chBoxLuaDebug->AutoSize = true;
+			this->chBoxLuaDebug->Location = System::Drawing::Point(0, 88);
+			this->chBoxLuaDebug->Name = L"chBoxLuaDebug";
+			this->chBoxLuaDebug->Size = System::Drawing::Size(130, 17);
+			this->chBoxLuaDebug->TabIndex = 13;
+			this->chBoxLuaDebug->Text = L"Lua Debug Messages";
+			this->chBoxLuaDebug->UseVisualStyleBackColor = true;
+			this->chBoxLuaDebug->CheckedChanged += gcnew System::EventHandler(this, &Form1::chBoxLuaDebug_CheckedChanged);
+			// 
+			// textLogmateFilters
+			// 
+			this->textLogmateFilters->Location = System::Drawing::Point(0, 32);
+			this->textLogmateFilters->Name = L"textLogmateFilters";
+			this->textLogmateFilters->Size = System::Drawing::Size(184, 20);
+			this->textLogmateFilters->TabIndex = 6;
+			this->textLogmateFilters->TextChanged += gcnew System::EventHandler(this, &Form1::textLogmateFilters_TextChanged);
+			// 
+			// chBoxLogmate
+			// 
+			this->chBoxLogmate->AutoSize = true;
+			this->chBoxLogmate->Location = System::Drawing::Point(0, 64);
+			this->chBoxLogmate->Name = L"chBoxLogmate";
+			this->chBoxLogmate->Size = System::Drawing::Size(67, 17);
+			this->chBoxLogmate->TabIndex = 12;
+			this->chBoxLogmate->Text = L"Logmate";
+			this->chBoxLogmate->UseVisualStyleBackColor = true;
+			this->chBoxLogmate->CheckedChanged += gcnew System::EventHandler(this, &Form1::chBoxLogmate_CheckedChanged);
 			// 
 			// Form1
 			// 
@@ -250,7 +334,6 @@ namespace CppCLRWinFormsProject {
 			this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
 			this->BackColor = System::Drawing::SystemColors::WindowFrame;
 			this->ClientSize = System::Drawing::Size(442, 669);
-			this->Controls->Add(this->checkBox1);
 			this->Controls->Add(this->panelDev);
 			this->Controls->Add(labelFPSLimit);
 			this->Controls->Add(this->textBox2);
@@ -269,6 +352,16 @@ namespace CppCLRWinFormsProject {
 			this->PerformLayout();
 
 		}
+	private: void setChBoxBitField(int bit, bool state)
+	{
+		// Set the bit to 1
+		if (state) {
+			this->argFlags |= (1 << bit);
+			return;
+		}
+		// Set the bit to 0
+		this->argFlags &= ~(1 << bit);
+	}
 #pragma endregion
 	private: System::Void checkedListBox1_SelectedIndexChanged(System::Object^ sender, System::EventArgs^ e) {
 		CheckedListBox^ checkedListBox = dynamic_cast<CheckedListBox^>(sender);
@@ -286,7 +379,7 @@ namespace CppCLRWinFormsProject {
 					printf("%d index checkbox was not checked\n", i);
 				}
 			}
-			this->flagsUserField = newUserOptions;
+			//this->flagsUserField = newUserOptions;
 			printf("resultant value was %d\n", newUserOptions);
 		}
 	}
@@ -359,7 +452,7 @@ private: System::Void checkedListBox2_OnItemCheck(System::Object^ sender, System
                     printf("%d index checkbox was not checked.\n", i);
                 }
             }
-            this->flagsDevField = newDevOptions;
+            //this->flagsDevField = newDevOptions;
             printf("flagsDevField updated to %d.\n", newDevOptions);
         }
     }
@@ -382,8 +475,26 @@ private: System::Void checkedListBox2_OnItemCheck(System::Object^ sender, System
 		this->panelDev->Hide();
 	}
 		   
-	private: System::Void checkBox1_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
-		puts("Check changed");
+	private: System::Void chBoxLogmate_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_LOGMATE, sender);
+	}
+
+	private: System::Void chBoxLuaDebug_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_LUA_DEBUG, sender);
+	}
+	private: System::Void chBoxControlDialog_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_CTRL_DIALOG, sender);
+	}	
+	private: System::Void chBoxSoundDialog_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_SOUND_DIALOG, sender);
+	}
+	private: System::Void chBoxNoBpCache_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_NO_BP_CACHE, sender);
+	}
+	private: System::Void textLogmateFilters_TextChanged(System::Object^ sender, System::EventArgs^ e) {
+		TEXT_BOX_STORE_FROM_EVENT(this->logmateFilters, sender);
 	}
 };
 }
+
+
