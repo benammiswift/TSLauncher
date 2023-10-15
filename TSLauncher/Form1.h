@@ -12,20 +12,25 @@
 #include <string>
 #include <iostream>
 
+//Stringybois
 #define RW_REG_KEY_PATH "SOFTWARE\\WOW6432Node\\railsimulator.com\\railworks"
+#define RW_32BIT_EXE "Railworks.exe"
+#define RW_64BIT_EXE "RailWorks64.exe"
+#define RW_DX12_EXE "RailWorksDX12_64.exe"
 
+//functions to serialise and deserialise numerical variables to strings
 #define REG_STORE_SERIALISE_OUT(str) sprintf(str, "%d,%d", (int) this->panelDevState, this->argFlags );
 #define REG_STORE_SERIALISE_IN(str)  sscanf(str, "%d,%d", &this->panelDevState, &this->argFlags );
 
-
+// Checkbox indexes
 #define CH_BOX_BIT_LOGMATE 0
 #define CH_BOX_BIT_LUA_DEBUG 1
 #define CH_BOX_BIT_CTRL_DIALOG 2
 #define CH_BOX_BIT_SOUND_DIALOG 3
 #define CH_BOX_BIT_NO_BP_CACHE 4
-#define CH_BOX_BIT_ 5
-
-
+#define CH_BOX_BIT_ASYNC 5
+#define CH_BOX_BIT_MULTICORE 6
+#define CH_BOX_BIT_FOLLOWAI 7
 
 
 
@@ -41,6 +46,7 @@ namespace CppCLRWinFormsProject {
 
 
 #ifdef _DEBUG
+
 #define CH_BOX_SET_BIT(argFlags, bit, sender) \
 		CheckBox^ checkBox = dynamic_cast<CheckBox^>(sender); \
 		if (checkBox->Checked) { \
@@ -53,15 +59,16 @@ namespace CppCLRWinFormsProject {
 		this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", ser); \
 		printf("Value of the store is now %d\n", argFlags); 
 
-#define TEXT_BOX_STORE_FROM_EVENT(location, sender) \
+#define TEXT_BOX_STORE_FROM_EVENT(location, sender, regKey) \
 		TextBox^ textBox = dynamic_cast<TextBox^>(sender); \
 		String^ text = textBox->Text; \
 		msclr::interop::marshal_context context; \
 		const char* charPtr = context.marshal_as<const char*>(text); \
 		location = _strdup(charPtr); \
-		this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store_logmate", location); \
+		this->SetStringToRegistry(RW_REG_KEY_PATH, regKey, location); \
 		printf("Text box changed to : %s\n", location);
 #else
+
 #define CH_BOX_SET_BIT(argFlags, bit, sender) \
 		CheckBox^ checkBox = dynamic_cast<CheckBox^>(sender); \
 		if (checkBox->Checked) { \
@@ -71,14 +78,15 @@ namespace CppCLRWinFormsProject {
 		} \
 		char* ser = (char*)malloc(2048); \
 		REG_STORE_SERIALISE_OUT(ser); \
-		this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", ser); \
+		this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", ser); 
 
-#define TEXT_BOX_STORE_FROM_EVENT(location, sender) \
-	TextBox^ textBox = dynamic_cast<TextBox^>(sender); \
-	String^ text = textBox->Text; \
-	msclr::interop::marshal_context context; \
-	const char* charPtr = context.marshal_as<const char*>(text); \
-	location = _strdup(charPtr); 
+#define TEXT_BOX_STORE_FROM_EVENT(location, sender, regKey) \
+		TextBox^ textBox = dynamic_cast<TextBox^>(sender); \
+		String^ text = textBox->Text; \
+		msclr::interop::marshal_context context; \
+		const char* charPtr = context.marshal_as<const char*>(text); \
+		location = _strdup(charPtr); \
+		this->SetStringToRegistry(RW_REG_KEY_PATH, regKey, location); 
 	
 #endif
 
@@ -99,17 +107,23 @@ namespace CppCLRWinFormsProject {
 				//printf(" printing to console");
 			}
 			
-			puts("deez");
 #endif
 
-			//this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", "Hi")
-			//this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", "Hi")
+			//Create some strings to store stuff in 
 			char* regStore = (char*)malloc(4096);
 			char* regLogmate = (char*)malloc(4096);
+			char* regFPS = (char*)malloc(4096);
+
+			//Read from registry
 			regStore = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "launcher_store");
 			regLogmate = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "launcher_store_logmate");
+			regFPS = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "launcher_store_FPS");
+
+			//Deserialise if there's an entry for the boolean flags
 			if (regStore != nullptr)
 				REG_STORE_SERIALISE_IN(regStore);
+
+			//Get the RW Path
 			this->rwPath = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "install_path");
 			if (this->rwPath != nullptr)
 			{
@@ -119,26 +133,43 @@ namespace CppCLRWinFormsProject {
 				System::String^ text = msclr::interop::marshal_as<System::String^>(str);
 				rwLoc->Text = text;
 			}
-			printf("Read rw path from Reg as : %s\n", this->rwPath);
+			else
+			{
+				char* tempVal = (char*)malloc(4096);
+				std::string str("Error : DID NOT FIND RAILWORKS PATH");
+				System::String^ text = msclr::interop::marshal_as<System::String^>(str);
+				rwLoc->Text = text;
+			}
 
+			//Handle the string fields being loaded from the Registry
 			if (regLogmate)
 			{
+				puts("setting logmate");
 				std::string str(regLogmate);
 				System::String^ text = msclr::interop::marshal_as<System::String^>(str);
 				textLogmateFilters->Text = text;
 			}
 
+			if (regFPS != nullptr)
+			{
+				puts("setting fps");
+				std::string str(regFPS);
+				System::String^ text = msclr::interop::marshal_as<System::String^>(str);
+				textFPSLimit->Text = text;
+			}
+			
+			//If there's no bit options loaded from the registry we're done
 			if (regStore == nullptr)
 			{
 				return;
 			}
 
-
+			//Hide or show the Developer launch options
 			if (this->panelDevState)
 				this->panelDev->Show();
 
 			
-
+			//Set all the checkboxes from the registry
 			for (int i = 0; i < 32; i++) {
 				bool state = (this->argFlags & (1 << i)) != 0;
 
@@ -163,15 +194,23 @@ namespace CppCLRWinFormsProject {
 					if (state)
 						this->chBoxNoBpCache->Checked = true;
 					break;
+				case CH_BOX_BIT_ASYNC:
+					if (state)
+						this->chBoxAsync->Checked = true;
+					break;
+				case CH_BOX_BIT_MULTICORE:
+					if (state)
+						this->chBoxMulticore->Checked = true;
+					break;
+				case CH_BOX_BIT_FOLLOWAI:
+					if (state)
+						this->chBoxFollowAI->Checked = true;
+					break;
 				default:
 					// Handle the default case (for values not listed in the cases)
 					break;
 				}
 			}
-
-			
-			//TODO: Add the constructor code here
-			//
 		}
 
 	protected:
@@ -186,7 +225,7 @@ namespace CppCLRWinFormsProject {
 			}
 		}
 
-
+	//Reads a REG_SZ from the registry
 	private: char* ReadStringFromRegistry(const char* keyPath, const char* valueName) {
 		HKEY hKey;
 		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyPath, 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
@@ -214,6 +253,8 @@ namespace CppCLRWinFormsProject {
 
 		return data;
 	}
+	
+	//Stores a string in a REG_SZ registry key
 	private: bool SetStringToRegistry(const char* keyPath, const char* valueName, const char* data) {
 			HKEY hKey;
 			if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, keyPath, 0, KEY_WRITE, &hKey) != ERROR_SUCCESS) {
@@ -232,14 +273,17 @@ namespace CppCLRWinFormsProject {
 	private: bool panelDevState;
 	private: uint32_t argFlags;
 	private: char* logmateFilters;
-	private: System::Windows::Forms::Button^ LaunchBit32;
-	private: System::Windows::Forms::CheckedListBox^ checkboxesUser;
+	private: char* fpsLimit;
+	private: System::Windows::Forms::Button^ launchBit32;
+
+
 	protected:
 	protected:
 	private: System::Windows::Forms::Button^ launchBit64;
 	private: System::Windows::Forms::Button^ launchDX12;
 	private: System::Windows::Forms::Button^ toggleDev;
-	private: System::Windows::Forms::TextBox^ textBox2;
+	private: System::Windows::Forms::TextBox^ textFPSLimit;
+
 	private: System::Windows::Forms::Label^ labelLogmateFilter;
 	private: System::Windows::Forms::Panel^ panelDev;
 	private: System::Windows::Forms::CheckBox^ chBoxLogmate;
@@ -248,7 +292,11 @@ namespace CppCLRWinFormsProject {
 	private: System::Windows::Forms::CheckBox^ chBoxNoBpCache;
 	private: System::Windows::Forms::CheckBox^ chBoxSoundDialog;
 	private: System::Windows::Forms::CheckBox^ chBoxControlDialog;
-private: System::Windows::Forms::Label^ rwLoc;
+	private: System::Windows::Forms::Label^ rwLoc;
+	private: System::Windows::Forms::CheckBox^ chBoxAsync;
+	private: System::Windows::Forms::CheckBox^ chBoxMulticore;
+	private: System::Windows::Forms::CheckBox^ chBoxFollowAI;
+
 
 
 	protected:
@@ -269,12 +317,11 @@ private: System::Windows::Forms::Label^ rwLoc;
 			System::Windows::Forms::Label^ title;
 			System::Windows::Forms::Label^ labelFPSLimit;
 			this->labelLogmateFilter = (gcnew System::Windows::Forms::Label());
-			this->LaunchBit32 = (gcnew System::Windows::Forms::Button());
-			this->checkboxesUser = (gcnew System::Windows::Forms::CheckedListBox());
+			this->launchBit32 = (gcnew System::Windows::Forms::Button());
 			this->launchBit64 = (gcnew System::Windows::Forms::Button());
 			this->launchDX12 = (gcnew System::Windows::Forms::Button());
 			this->toggleDev = (gcnew System::Windows::Forms::Button());
-			this->textBox2 = (gcnew System::Windows::Forms::TextBox());
+			this->textFPSLimit = (gcnew System::Windows::Forms::TextBox());
 			this->panelDev = (gcnew System::Windows::Forms::Panel());
 			this->chBoxNoBpCache = (gcnew System::Windows::Forms::CheckBox());
 			this->chBoxSoundDialog = (gcnew System::Windows::Forms::CheckBox());
@@ -283,6 +330,9 @@ private: System::Windows::Forms::Label^ rwLoc;
 			this->textLogmateFilters = (gcnew System::Windows::Forms::TextBox());
 			this->chBoxLogmate = (gcnew System::Windows::Forms::CheckBox());
 			this->rwLoc = (gcnew System::Windows::Forms::Label());
+			this->chBoxAsync = (gcnew System::Windows::Forms::CheckBox());
+			this->chBoxMulticore = (gcnew System::Windows::Forms::CheckBox());
+			this->chBoxFollowAI = (gcnew System::Windows::Forms::CheckBox());
 			title = (gcnew System::Windows::Forms::Label());
 			labelFPSLimit = (gcnew System::Windows::Forms::Label());
 			this->panelDev->SuspendLayout();
@@ -319,25 +369,15 @@ private: System::Windows::Forms::Label^ rwLoc;
 			this->labelLogmateFilter->Text = L"Logmate Filters";
 			this->labelLogmateFilter->Click += gcnew System::EventHandler(this, &Form1::label1_Click);
 			// 
-			// LaunchBit32
+			// launchBit32
 			// 
-			this->LaunchBit32->Location = System::Drawing::Point(32, 112);
-			this->LaunchBit32->Name = L"LaunchBit32";
-			this->LaunchBit32->Size = System::Drawing::Size(121, 35);
-			this->LaunchBit32->TabIndex = 0;
-			this->LaunchBit32->Text = L"32 Bit";
-			this->LaunchBit32->UseVisualStyleBackColor = true;
-			this->LaunchBit32->Click += gcnew System::EventHandler(this, &Form1::button1_Click);
-			// 
-			// checkboxesUser
-			// 
-			this->checkboxesUser->FormattingEnabled = true;
-			this->checkboxesUser->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"Async Keys", L"Multicore", L"Follow AI Train" });
-			this->checkboxesUser->Location = System::Drawing::Point(32, 160);
-			this->checkboxesUser->Name = L"checkboxesUser";
-			this->checkboxesUser->Size = System::Drawing::Size(184, 214);
-			this->checkboxesUser->TabIndex = 1;
-			this->checkboxesUser->SelectedIndexChanged += gcnew System::EventHandler(this, &Form1::checkedListBox1_SelectedIndexChanged);
+			this->launchBit32->Location = System::Drawing::Point(32, 112);
+			this->launchBit32->Name = L"launchBit32";
+			this->launchBit32->Size = System::Drawing::Size(121, 35);
+			this->launchBit32->TabIndex = 0;
+			this->launchBit32->Text = L"32 Bit";
+			this->launchBit32->UseVisualStyleBackColor = true;
+			this->launchBit32->Click += gcnew System::EventHandler(this, &Form1::launchBit32_Click);
 			// 
 			// launchBit64
 			// 
@@ -347,6 +387,7 @@ private: System::Windows::Forms::Label^ rwLoc;
 			this->launchBit64->TabIndex = 2;
 			this->launchBit64->Text = L"64 Bit";
 			this->launchBit64->UseVisualStyleBackColor = true;
+			this->launchBit64->Click += gcnew System::EventHandler(this, &Form1::launchBit64_Click_1);
 			// 
 			// launchDX12
 			// 
@@ -356,6 +397,7 @@ private: System::Windows::Forms::Label^ rwLoc;
 			this->launchDX12->TabIndex = 3;
 			this->launchDX12->Text = L"DX12 ";
 			this->launchDX12->UseVisualStyleBackColor = true;
+			this->launchDX12->Click += gcnew System::EventHandler(this, &Form1::launchDX12_Click_1);
 			// 
 			// toggleDev
 			// 
@@ -367,12 +409,13 @@ private: System::Windows::Forms::Label^ rwLoc;
 			this->toggleDev->UseVisualStyleBackColor = true;
 			this->toggleDev->Click += gcnew System::EventHandler(this, &Form1::toggleDev_Click);
 			// 
-			// textBox2
+			// textFPSLimit
 			// 
-			this->textBox2->Location = System::Drawing::Point(32, 408);
-			this->textBox2->Name = L"textBox2";
-			this->textBox2->Size = System::Drawing::Size(184, 20);
-			this->textBox2->TabIndex = 9;
+			this->textFPSLimit->Location = System::Drawing::Point(32, 408);
+			this->textFPSLimit->Name = L"textFPSLimit";
+			this->textFPSLimit->Size = System::Drawing::Size(184, 20);
+			this->textFPSLimit->TabIndex = 9;
+			this->textFPSLimit->TextChanged += gcnew System::EventHandler(this, &Form1::textFPSLimit_TextChanged);
 			// 
 			// panelDev
 			// 
@@ -461,6 +504,42 @@ private: System::Windows::Forms::Label^ rwLoc;
 			this->rwLoc->TabIndex = 12;
 			this->rwLoc->Text = L"label1";
 			// 
+			// chBoxAsync
+			// 
+			this->chBoxAsync->AutoSize = true;
+			this->chBoxAsync->ForeColor = System::Drawing::SystemColors::ControlText;
+			this->chBoxAsync->Location = System::Drawing::Point(32, 160);
+			this->chBoxAsync->Name = L"chBoxAsync";
+			this->chBoxAsync->Size = System::Drawing::Size(81, 17);
+			this->chBoxAsync->TabIndex = 17;
+			this->chBoxAsync->Text = L"Async Keys";
+			this->chBoxAsync->UseVisualStyleBackColor = true;
+			this->chBoxAsync->CheckedChanged += gcnew System::EventHandler(this, &Form1::chBoxAsync_CheckedChanged);
+			// 
+			// chBoxMulticore
+			// 
+			this->chBoxMulticore->AutoSize = true;
+			this->chBoxMulticore->ForeColor = System::Drawing::SystemColors::ControlText;
+			this->chBoxMulticore->Location = System::Drawing::Point(32, 184);
+			this->chBoxMulticore->Name = L"chBoxMulticore";
+			this->chBoxMulticore->Size = System::Drawing::Size(69, 17);
+			this->chBoxMulticore->TabIndex = 18;
+			this->chBoxMulticore->Text = L"Multicore";
+			this->chBoxMulticore->UseVisualStyleBackColor = true;
+			this->chBoxMulticore->CheckedChanged += gcnew System::EventHandler(this, &Form1::chBoxMulticore_CheckedChanged);
+			// 
+			// chBoxFollowAI
+			// 
+			this->chBoxFollowAI->AutoSize = true;
+			this->chBoxFollowAI->ForeColor = System::Drawing::SystemColors::ControlText;
+			this->chBoxFollowAI->Location = System::Drawing::Point(32, 208);
+			this->chBoxFollowAI->Name = L"chBoxFollowAI";
+			this->chBoxFollowAI->Size = System::Drawing::Size(96, 17);
+			this->chBoxFollowAI->TabIndex = 19;
+			this->chBoxFollowAI->Text = L"Follow AI Train";
+			this->chBoxFollowAI->UseVisualStyleBackColor = true;
+			this->chBoxFollowAI->CheckedChanged += gcnew System::EventHandler(this, &Form1::chBoxFollowAI_CheckedChanged);
+			// 
 			// Form1
 			// 
 			this->AccessibleDescription = L"Launcher for Train Sim";
@@ -469,16 +548,18 @@ private: System::Windows::Forms::Label^ rwLoc;
 			this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
 			this->BackColor = System::Drawing::SystemColors::WindowFrame;
 			this->ClientSize = System::Drawing::Size(442, 669);
+			this->Controls->Add(this->chBoxFollowAI);
+			this->Controls->Add(this->chBoxMulticore);
+			this->Controls->Add(this->chBoxAsync);
 			this->Controls->Add(this->rwLoc);
 			this->Controls->Add(this->panelDev);
 			this->Controls->Add(labelFPSLimit);
-			this->Controls->Add(this->textBox2);
+			this->Controls->Add(this->textFPSLimit);
 			this->Controls->Add(title);
 			this->Controls->Add(this->toggleDev);
 			this->Controls->Add(this->launchDX12);
 			this->Controls->Add(this->launchBit64);
-			this->Controls->Add(this->checkboxesUser);
-			this->Controls->Add(this->LaunchBit32);
+			this->Controls->Add(this->launchBit32);
 			this->ForeColor = System::Drawing::SystemColors::ControlText;
 			this->Name = L"Form1";
 			this->Text = L"TSLauncher";
@@ -488,6 +569,8 @@ private: System::Windows::Forms::Label^ rwLoc;
 			this->PerformLayout();
 
 		}
+
+	// function to set a bit field in the argFlags
 	private: void setChBoxBitField(int bit, bool state)
 	{
 		// Set the bit to 1
@@ -519,87 +602,13 @@ private: System::Windows::Forms::Label^ rwLoc;
 			printf("resultant value was %d\n", newUserOptions);
 		}
 	}
-	private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e) {
-	}
-		   /*
-	private: System::Void checkedListBox2_OnMouseDoubleClick(System::Object^ sender, System::EventArgs^ e) {
-		puts("double click");
-	}
-	private: System::Void checkedListBox2_SelectedIndexChanged(System::Object^ sender, System::EventArgs^ e) {
-		CheckedListBox^ checkedListBox = dynamic_cast<CheckedListBox^>(sender);
-
-		if (checkedListBox != nullptr) {
-			uint32_t newDevOptions = 0;
-			for (int i = 0; i < checkedListBox->Items->Count; i++) {
-				if (checkedListBox->GetItemChecked(i)) {
-					printf("%d index checkbox was checked\n", i);
-					uint32_t bitFlag = 1U << i;
-					newDevOptions |= bitFlag;
-				}
-				else
-				{
-					printf("%d index checkbox was not checked\n", i);
-				}
-			}
-			this->flagsDevField = newDevOptions;
-			printf("resultant value was %d\n", newDevOptions);
-		}
-	}
-	private: System::Void checkedListBox2_ItemCheck(System::Object^ sender, System::Windows::Forms::ItemCheckEventArgs^ e) {
-		if (e->CurrentValue == CheckState::Unchecked && e->NewValue == CheckState::Unchecked) {
-			// This check ensures it's a single-click (both the current and new values are unchecked)
-			e->NewValue = CheckState::Checked; // Manually check the item
-		}
-		else if (e->CurrentValue == CheckState::Checked && e->NewValue == CheckState::Checked) {
-			// This check ensures it's a single-click (both the current and new values are checked)
-			e->NewValue = CheckState::Unchecked; // Manually uncheck the item
-		}
-	}
-	*/
-	private: bool isDoubleClick = false; // Flag to track double-click
-
-private: System::Void checkedListBox2_DoubleClick(System::Object^ sender, System::EventArgs^ e) {
-    isDoubleClick = true; // Set the flag to indicate a double-click
-    printf("Double-click detected.\n");
-}
-	private: System::Void checkedListBox2_SelectedIndexChanged(System::Object^ sender, System::EventArgs^ e) {
-	}
-private: System::Void checkedListBox2_OnItemCheck(System::Object^ sender, System::EventArgs^ e) {
-    CheckedListBox^ checkedListBox = dynamic_cast<CheckedListBox^>(sender);
-
-    if (checkedListBox != nullptr) {
-        if (isDoubleClick) {
-            // Handle double-click to toggle the checkbox state
-            int selectedIndex = checkedListBox->SelectedIndex;
-            if (selectedIndex != -1) {
-                checkedListBox->SetItemChecked(selectedIndex, !checkedListBox->GetItemChecked(selectedIndex));
-                printf("Toggled checkbox at index %d.\n", selectedIndex);
-            }
-            isDoubleClick = false; // Reset the flag
-        } else {
-            // Handle regular selection changes and update flagsDevField
-            uint32_t newDevOptions = 0;
-            for (int i = 0; i < checkedListBox->Items->Count; i++) {
-                if (checkedListBox->GetItemChecked(i)) {
-                    uint32_t bitFlag = 1U << i;
-                    newDevOptions |= bitFlag;
-                    printf("%d index checkbox was checked.\n", i);
-                } else {
-                    printf("%d index checkbox was not checked.\n", i);
-                }
-            }
-            //this->flagsDevField = newDevOptions;
-            printf("flagsDevField updated to %d.\n", newDevOptions);
-        }
-    }
-}
-
-
-
+	// Stubs
 	private: System::Void label1_Click(System::Object^ sender, System::EventArgs^ e) {
 	}
 	private: System::Void label2_Click(System::Object^ sender, System::EventArgs^ e) {
 	}
+
+	//Enable Developer options
 	private: System::Void toggleDev_Click(System::Object^ sender, System::EventArgs^ e) {
 		this->panelDevState = !this->panelDevState;
 		puts("toggling dev panel");
@@ -613,10 +622,10 @@ private: System::Void checkedListBox2_OnItemCheck(System::Object^ sender, System
 		}
 		this->panelDev->Hide();
 	}
-		   
+	
+	//Checkboxes
 	private: System::Void chBoxLogmate_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
 		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_LOGMATE, sender);
-
 	}
 
 	private: System::Void chBoxLuaDebug_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
@@ -631,10 +640,121 @@ private: System::Void checkedListBox2_OnItemCheck(System::Object^ sender, System
 	private: System::Void chBoxNoBpCache_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
 		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_NO_BP_CACHE, sender);
 	}
-	private: System::Void textLogmateFilters_TextChanged(System::Object^ sender, System::EventArgs^ e) {
-		TEXT_BOX_STORE_FROM_EVENT(this->logmateFilters, sender);
+	private: System::Void chBoxAsync_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_ASYNC, sender);
+	}
+	private: System::Void chBoxMulticore_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_MULTICORE, sender);
+	}
+	private: System::Void chBoxFollowAI_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
+		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_FOLLOWAI, sender);
 	}
 
+	//Text Fields
+	private: System::Void textFPSLimit_TextChanged(System::Object^ sender, System::EventArgs^ e) {
+		TEXT_BOX_STORE_FROM_EVENT(this->fpsLimit, sender, "launcher_store_fps");
+	}
+	private: System::Void textLogmateFilters_TextChanged(System::Object^ sender, System::EventArgs^ e) {
+		TEXT_BOX_STORE_FROM_EVENT(this->logmateFilters, sender, "launcher_store_logmate");
+	}
+	//Launch buttons
+	private: System::Void launchBit32_Click(System::Object^ sender, System::EventArgs^ e) {
+		this->launchTS(0);
+	}
+	private: System::Void launchBit64_Click_1(System::Object^ sender, System::EventArgs^ e) {
+		this->launchTS(1);
+	}
+	private: System::Void launchDX12_Click_1(System::Object^ sender, System::EventArgs^ e) {
+		this->launchTS(2);
+	}
+
+	//Common functions that are launched by the launch buttons
+	private: void launchTS(int version)
+	{
+		//Make a buffer and put the start of our command in
+		char buffer[8096];
+		strcpy(buffer, "START /D ");
+		strcat(buffer, this->rwPath);
+		strcat(buffer, " ");
+
+		//Add the RW EXE name
+		switch (version)
+		{
+			case 0:
+				strcat(buffer, RW_32BIT_EXE);
+				break;
+			case 1:
+				strcat(buffer, RW_64BIT_EXE);
+				break;
+			case 2:
+				strcat(buffer, RW_DX12_EXE);
+				break;
+		}
+
+		//Handle all the boolean launch functions
+
+		for (int i = 0; i < 32; i++) {
+			bool state = (this->argFlags & (1 << i)) != 0;
+
+			switch (i) {
+			case CH_BOX_BIT_LOGMATE:
+				if (state)
+					strcat(buffer, " -LogMate");
+				break;
+			case CH_BOX_BIT_LUA_DEBUG:
+				if (state)
+					strcat(buffer, " -lua-debug-messages");
+				break;
+			case CH_BOX_BIT_CTRL_DIALOG:
+				if (state)
+					strcat(buffer, " -ShowControlStateDialog");
+				break;
+			case CH_BOX_BIT_SOUND_DIALOG:
+				if (state)
+					strcat(buffer, " -EnableSoundDebugDialogs");
+				break;
+			case CH_BOX_BIT_NO_BP_CACHE:
+				if (state)
+					strcat(buffer, " -DontUseBlueprintCache");
+				break;
+			case CH_BOX_BIT_ASYNC:
+				if (state)
+					strcat(buffer, " -EnableAsyncKeys");
+				break;
+			case CH_BOX_BIT_MULTICORE:
+				if (state)
+					strcat(buffer, " -Multicore");
+				break;
+			case CH_BOX_BIT_FOLLOWAI:
+				if (state)
+					strcat(buffer, " -followaitrain");
+				break;
+			default:
+				break;
+			}
+		}
+
+		//Check if the text fields exist, if they do build their argument and add it.
+
+		if (this->logmateFilters!= NULL && strlen(this->logmateFilters) > 0)
+		{
+			char catTemp[256];
+			sprintf(catTemp, " -SetLogFilters=\"%s\"", this->logmateFilters);
+			strcat(buffer, catTemp);
+		}
+
+		if (this->fpsLimit != NULL && strlen(this->fpsLimit) > 0)
+		{
+			char catTemp[256];
+			sprintf(catTemp, " -FPSLimit=%s", this->fpsLimit);
+			strcat(buffer, catTemp);
+		}
+
+		printf("%s\n", buffer);
+		return;
+		system(buffer);
+	}
+	
 };
 }
 
