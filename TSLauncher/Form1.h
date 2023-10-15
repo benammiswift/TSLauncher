@@ -15,7 +15,8 @@
 #define RW_REG_KEY_PATH "SOFTWARE\\WOW6432Node\\railsimulator.com\\railworks"
 
 #define REG_STORE_SERIALISE_OUT(str) sprintf(str, "%d,%d", (int) this->panelDevState, this->argFlags );
-#define REG_STORE_SERIALISE_IN(str)  sscanf(str, "%d,%d", &this->panelDevState, &this->argFlags);
+#define REG_STORE_SERIALISE_IN(str)  sscanf(str, "%d,%d", &this->panelDevState, &this->argFlags );
+
 
 #define CH_BOX_BIT_LOGMATE 0
 #define CH_BOX_BIT_LUA_DEBUG 1
@@ -24,31 +25,7 @@
 #define CH_BOX_BIT_NO_BP_CACHE 4
 #define CH_BOX_BIT_ 5
 
-#ifdef _DEBUG
-	#define CH_BOX_SET_BIT(argFlags, bit, sender) \
-		CheckBox^ checkBox = dynamic_cast<CheckBox^>(sender); \
-		if (checkBox->Checked) { \
-			(argFlags) |= (1 << (bit)); \
-		} else { \
-			(argFlags) &= ~(1 << (bit)); \
-		} \
-		printf("Value of the store is now %d\n", argFlags); 
-#define TEXT_BOX_STORE_FROM_EVENT(location, sender) \
-	TextBox^ textBox = dynamic_cast<TextBox^>(sender); \
-	String^ text = textBox->Text; \
-	msclr::interop::marshal_context context; \
-	const char* charPtr = context.marshal_as<const char*>(text); \
-	location = _strdup(charPtr); \
-	printf("Text box changed to : %s\n", location);
-#else
-	#define CH_BOX_SET_BIT(argFlags, bit, sender) \
-		CheckBox^ checkBox = dynamic_cast<CheckBox^>(sender); \
-		if (checkBox->Checked) { \
-			(argFlags) |= (1 << (bit)); \
-		} else { \
-			(argFlags) &= ~(1 << (bit)); \
-		} 
-#endif
+
 
 
 
@@ -60,6 +37,50 @@ namespace CppCLRWinFormsProject {
 	using namespace System::Windows::Forms;
 	using namespace System::Data;
 	using namespace System::Drawing;
+
+
+
+#ifdef _DEBUG
+#define CH_BOX_SET_BIT(argFlags, bit, sender) \
+		CheckBox^ checkBox = dynamic_cast<CheckBox^>(sender); \
+		if (checkBox->Checked) { \
+			(argFlags) |= (1 << (bit)); \
+		} else { \
+			(argFlags) &= ~(1 << (bit)); \
+		} \
+		char* ser = (char*)malloc(2048); \
+		REG_STORE_SERIALISE_OUT(ser); \
+		this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", ser); \
+		printf("Value of the store is now %d\n", argFlags); 
+
+#define TEXT_BOX_STORE_FROM_EVENT(location, sender) \
+		TextBox^ textBox = dynamic_cast<TextBox^>(sender); \
+		String^ text = textBox->Text; \
+		msclr::interop::marshal_context context; \
+		const char* charPtr = context.marshal_as<const char*>(text); \
+		location = _strdup(charPtr); \
+		this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store_logmate", location); \
+		printf("Text box changed to : %s\n", location);
+#else
+#define CH_BOX_SET_BIT(argFlags, bit, sender) \
+		CheckBox^ checkBox = dynamic_cast<CheckBox^>(sender); \
+		if (checkBox->Checked) { \
+			(argFlags) |= (1 << (bit)); \
+		} else { \
+			(argFlags) &= ~(1 << (bit)); \
+		} \
+		char* ser = (char*)malloc(2048); \
+		REG_STORE_SERIALISE_OUT(ser); \
+		this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", ser); \
+
+#define TEXT_BOX_STORE_FROM_EVENT(location, sender) \
+	TextBox^ textBox = dynamic_cast<TextBox^>(sender); \
+	String^ text = textBox->Text; \
+	msclr::interop::marshal_context context; \
+	const char* charPtr = context.marshal_as<const char*>(text); \
+	location = _strdup(charPtr); 
+	
+#endif
 
 	/// <summary>
 	/// Summary for Form1
@@ -82,15 +103,73 @@ namespace CppCLRWinFormsProject {
 #endif
 
 			//this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", "Hi")
-			char* temp = (char*) malloc(4096);
-			temp = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "launcher_store");
-			REG_STORE_SERIALISE_IN(temp);
+			//this->SetStringToRegistry(RW_REG_KEY_PATH, "launcher_store", "Hi")
+			char* regStore = (char*)malloc(4096);
+			char* regLogmate = (char*)malloc(4096);
+			regStore = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "launcher_store");
+			regLogmate = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "launcher_store_logmate");
+			if (regStore != nullptr)
+				REG_STORE_SERIALISE_IN(regStore);
 			this->rwPath = this->ReadStringFromRegistry(RW_REG_KEY_PATH, "install_path");
+			if (this->rwPath != nullptr)
+			{
+				char* tempVal = (char*)malloc(4096);
+				sprintf(tempVal, "Found railworks path : %s", this->rwPath);
+				std::string str(tempVal);
+				System::String^ text = msclr::interop::marshal_as<System::String^>(str);
+				rwLoc->Text = text;
+			}
 			printf("Read rw path from Reg as : %s\n", this->rwPath);
+
+			if (regLogmate)
+			{
+				std::string str(regLogmate);
+				System::String^ text = msclr::interop::marshal_as<System::String^>(str);
+				textLogmateFilters->Text = text;
+			}
+
+			if (regStore == nullptr)
+			{
+				return;
+			}
 
 
 			if (this->panelDevState)
 				this->panelDev->Show();
+
+			
+
+			for (int i = 0; i < 32; i++) {
+				bool state = (this->argFlags & (1 << i)) != 0;
+
+				switch (i) {
+				case CH_BOX_BIT_LOGMATE:
+					if (state)
+						this->chBoxLogmate->Checked = true;
+					break;
+				case CH_BOX_BIT_LUA_DEBUG:
+					if (state)
+						this->chBoxLuaDebug->Checked = true;
+					break;
+				case CH_BOX_BIT_CTRL_DIALOG:
+					if (state)
+						this->chBoxControlDialog->Checked = true;
+					break;
+				case CH_BOX_BIT_SOUND_DIALOG:
+					if (state)
+						this->chBoxSoundDialog->Checked = true;
+					break;
+				case CH_BOX_BIT_NO_BP_CACHE:
+					if (state)
+						this->chBoxNoBpCache->Checked = true;
+					break;
+				default:
+					// Handle the default case (for values not listed in the cases)
+					break;
+				}
+			}
+
+			
 			//TODO: Add the constructor code here
 			//
 		}
@@ -169,6 +248,8 @@ namespace CppCLRWinFormsProject {
 	private: System::Windows::Forms::CheckBox^ chBoxNoBpCache;
 	private: System::Windows::Forms::CheckBox^ chBoxSoundDialog;
 	private: System::Windows::Forms::CheckBox^ chBoxControlDialog;
+private: System::Windows::Forms::Label^ rwLoc;
+
 
 	protected:
 
@@ -201,6 +282,7 @@ namespace CppCLRWinFormsProject {
 			this->chBoxLuaDebug = (gcnew System::Windows::Forms::CheckBox());
 			this->textLogmateFilters = (gcnew System::Windows::Forms::TextBox());
 			this->chBoxLogmate = (gcnew System::Windows::Forms::CheckBox());
+			this->rwLoc = (gcnew System::Windows::Forms::Label());
 			title = (gcnew System::Windows::Forms::Label());
 			labelFPSLimit = (gcnew System::Windows::Forms::Label());
 			this->panelDev->SuspendLayout();
@@ -221,7 +303,7 @@ namespace CppCLRWinFormsProject {
 			// labelFPSLimit
 			// 
 			labelFPSLimit->AutoSize = true;
-			labelFPSLimit->Location = System::Drawing::Point(40, 360);
+			labelFPSLimit->Location = System::Drawing::Point(40, 384);
 			labelFPSLimit->Name = L"labelFPSLimit";
 			labelFPSLimit->Size = System::Drawing::Size(51, 13);
 			labelFPSLimit->TabIndex = 10;
@@ -239,7 +321,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// LaunchBit32
 			// 
-			this->LaunchBit32->Location = System::Drawing::Point(32, 88);
+			this->LaunchBit32->Location = System::Drawing::Point(32, 112);
 			this->LaunchBit32->Name = L"LaunchBit32";
 			this->LaunchBit32->Size = System::Drawing::Size(121, 35);
 			this->LaunchBit32->TabIndex = 0;
@@ -251,7 +333,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			this->checkboxesUser->FormattingEnabled = true;
 			this->checkboxesUser->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"Async Keys", L"Multicore", L"Follow AI Train" });
-			this->checkboxesUser->Location = System::Drawing::Point(32, 136);
+			this->checkboxesUser->Location = System::Drawing::Point(32, 160);
 			this->checkboxesUser->Name = L"checkboxesUser";
 			this->checkboxesUser->Size = System::Drawing::Size(184, 214);
 			this->checkboxesUser->TabIndex = 1;
@@ -259,7 +341,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// launchBit64
 			// 
-			this->launchBit64->Location = System::Drawing::Point(160, 88);
+			this->launchBit64->Location = System::Drawing::Point(160, 112);
 			this->launchBit64->Name = L"launchBit64";
 			this->launchBit64->Size = System::Drawing::Size(121, 35);
 			this->launchBit64->TabIndex = 2;
@@ -268,7 +350,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// launchDX12
 			// 
-			this->launchDX12->Location = System::Drawing::Point(288, 88);
+			this->launchDX12->Location = System::Drawing::Point(288, 112);
 			this->launchDX12->Name = L"launchDX12";
 			this->launchDX12->Size = System::Drawing::Size(121, 35);
 			this->launchDX12->TabIndex = 3;
@@ -277,7 +359,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// toggleDev
 			// 
-			this->toggleDev->Location = System::Drawing::Point(248, 144);
+			this->toggleDev->Location = System::Drawing::Point(248, 168);
 			this->toggleDev->Name = L"toggleDev";
 			this->toggleDev->Size = System::Drawing::Size(128, 35);
 			this->toggleDev->TabIndex = 4;
@@ -287,7 +369,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// textBox2
 			// 
-			this->textBox2->Location = System::Drawing::Point(32, 384);
+			this->textBox2->Location = System::Drawing::Point(32, 408);
 			this->textBox2->Name = L"textBox2";
 			this->textBox2->Size = System::Drawing::Size(184, 20);
 			this->textBox2->TabIndex = 9;
@@ -301,7 +383,7 @@ namespace CppCLRWinFormsProject {
 			this->panelDev->Controls->Add(this->textLogmateFilters);
 			this->panelDev->Controls->Add(this->chBoxLogmate);
 			this->panelDev->Controls->Add(this->labelLogmateFilter);
-			this->panelDev->Location = System::Drawing::Point(232, 208);
+			this->panelDev->Location = System::Drawing::Point(232, 232);
 			this->panelDev->Name = L"panelDev";
 			this->panelDev->Size = System::Drawing::Size(192, 208);
 			this->panelDev->TabIndex = 11;
@@ -370,6 +452,15 @@ namespace CppCLRWinFormsProject {
 			this->chBoxLogmate->UseVisualStyleBackColor = true;
 			this->chBoxLogmate->CheckedChanged += gcnew System::EventHandler(this, &Form1::chBoxLogmate_CheckedChanged);
 			// 
+			// rwLoc
+			// 
+			this->rwLoc->AutoSize = true;
+			this->rwLoc->Location = System::Drawing::Point(40, 88);
+			this->rwLoc->Name = L"rwLoc";
+			this->rwLoc->Size = System::Drawing::Size(35, 13);
+			this->rwLoc->TabIndex = 12;
+			this->rwLoc->Text = L"label1";
+			// 
 			// Form1
 			// 
 			this->AccessibleDescription = L"Launcher for Train Sim";
@@ -378,6 +469,7 @@ namespace CppCLRWinFormsProject {
 			this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
 			this->BackColor = System::Drawing::SystemColors::WindowFrame;
 			this->ClientSize = System::Drawing::Size(442, 669);
+			this->Controls->Add(this->rwLoc);
 			this->Controls->Add(this->panelDev);
 			this->Controls->Add(labelFPSLimit);
 			this->Controls->Add(this->textBox2);
@@ -524,6 +616,7 @@ private: System::Void checkedListBox2_OnItemCheck(System::Object^ sender, System
 		   
 	private: System::Void chBoxLogmate_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
 		CH_BOX_SET_BIT(this->argFlags, CH_BOX_BIT_LOGMATE, sender);
+
 	}
 
 	private: System::Void chBoxLuaDebug_CheckedChanged(System::Object^ sender, System::EventArgs^ e) {
@@ -541,6 +634,7 @@ private: System::Void checkedListBox2_OnItemCheck(System::Object^ sender, System
 	private: System::Void textLogmateFilters_TextChanged(System::Object^ sender, System::EventArgs^ e) {
 		TEXT_BOX_STORE_FROM_EVENT(this->logmateFilters, sender);
 	}
+
 };
 }
 
