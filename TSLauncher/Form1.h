@@ -343,7 +343,7 @@ namespace CppCLRWinFormsProject {
 			title->AutoSize = true;
 			title->Font = (gcnew System::Drawing::Font(L"Microsoft Sans Serif", 48, static_cast<System::Drawing::FontStyle>((System::Drawing::FontStyle::Bold | System::Drawing::FontStyle::Italic)),
 				System::Drawing::GraphicsUnit::Point, static_cast<System::Byte>(0)));
-			title->Location = System::Drawing::Point(16, 0);
+			title->Location = System::Drawing::Point(16, 8);
 			title->Name = L"title";
 			title->Size = System::Drawing::Size(411, 73);
 			title->TabIndex = 8;
@@ -353,7 +353,7 @@ namespace CppCLRWinFormsProject {
 			// labelFPSLimit
 			// 
 			labelFPSLimit->AutoSize = true;
-			labelFPSLimit->Location = System::Drawing::Point(40, 384);
+			labelFPSLimit->Location = System::Drawing::Point(40, 392);
 			labelFPSLimit->Name = L"labelFPSLimit";
 			labelFPSLimit->Size = System::Drawing::Size(51, 13);
 			labelFPSLimit->TabIndex = 10;
@@ -371,7 +371,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// launchBit32
 			// 
-			this->launchBit32->Location = System::Drawing::Point(32, 112);
+			this->launchBit32->Location = System::Drawing::Point(32, 120);
 			this->launchBit32->Name = L"launchBit32";
 			this->launchBit32->Size = System::Drawing::Size(121, 35);
 			this->launchBit32->TabIndex = 0;
@@ -381,7 +381,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// launchBit64
 			// 
-			this->launchBit64->Location = System::Drawing::Point(160, 112);
+			this->launchBit64->Location = System::Drawing::Point(160, 120);
 			this->launchBit64->Name = L"launchBit64";
 			this->launchBit64->Size = System::Drawing::Size(121, 35);
 			this->launchBit64->TabIndex = 2;
@@ -391,7 +391,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// launchDX12
 			// 
-			this->launchDX12->Location = System::Drawing::Point(288, 112);
+			this->launchDX12->Location = System::Drawing::Point(288, 120);
 			this->launchDX12->Name = L"launchDX12";
 			this->launchDX12->Size = System::Drawing::Size(121, 35);
 			this->launchDX12->TabIndex = 3;
@@ -401,7 +401,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// toggleDev
 			// 
-			this->toggleDev->Location = System::Drawing::Point(248, 168);
+			this->toggleDev->Location = System::Drawing::Point(248, 176);
 			this->toggleDev->Name = L"toggleDev";
 			this->toggleDev->Size = System::Drawing::Size(128, 35);
 			this->toggleDev->TabIndex = 4;
@@ -411,7 +411,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			// textFPSLimit
 			// 
-			this->textFPSLimit->Location = System::Drawing::Point(32, 408);
+			this->textFPSLimit->Location = System::Drawing::Point(32, 416);
 			this->textFPSLimit->Name = L"textFPSLimit";
 			this->textFPSLimit->Size = System::Drawing::Size(184, 20);
 			this->textFPSLimit->TabIndex = 9;
@@ -426,7 +426,7 @@ namespace CppCLRWinFormsProject {
 			this->panelDev->Controls->Add(this->textLogmateFilters);
 			this->panelDev->Controls->Add(this->chBoxLogmate);
 			this->panelDev->Controls->Add(this->labelLogmateFilter);
-			this->panelDev->Location = System::Drawing::Point(232, 232);
+			this->panelDev->Location = System::Drawing::Point(232, 240);
 			this->panelDev->Name = L"panelDev";
 			this->panelDev->Size = System::Drawing::Size(192, 208);
 			this->panelDev->TabIndex = 11;
@@ -498,7 +498,7 @@ namespace CppCLRWinFormsProject {
 			// rwLoc
 			// 
 			this->rwLoc->AutoSize = true;
-			this->rwLoc->Location = System::Drawing::Point(40, 88);
+			this->rwLoc->Location = System::Drawing::Point(40, 96);
 			this->rwLoc->Name = L"rwLoc";
 			this->rwLoc->Size = System::Drawing::Size(35, 13);
 			this->rwLoc->TabIndex = 12;
@@ -508,7 +508,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			this->chBoxAsync->AutoSize = true;
 			this->chBoxAsync->ForeColor = System::Drawing::SystemColors::ControlText;
-			this->chBoxAsync->Location = System::Drawing::Point(32, 160);
+			this->chBoxAsync->Location = System::Drawing::Point(32, 168);
 			this->chBoxAsync->Name = L"chBoxAsync";
 			this->chBoxAsync->Size = System::Drawing::Size(81, 17);
 			this->chBoxAsync->TabIndex = 17;
@@ -520,7 +520,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			this->chBoxMulticore->AutoSize = true;
 			this->chBoxMulticore->ForeColor = System::Drawing::SystemColors::ControlText;
-			this->chBoxMulticore->Location = System::Drawing::Point(32, 184);
+			this->chBoxMulticore->Location = System::Drawing::Point(32, 192);
 			this->chBoxMulticore->Name = L"chBoxMulticore";
 			this->chBoxMulticore->Size = System::Drawing::Size(69, 17);
 			this->chBoxMulticore->TabIndex = 18;
@@ -532,7 +532,7 @@ namespace CppCLRWinFormsProject {
 			// 
 			this->chBoxFollowAI->AutoSize = true;
 			this->chBoxFollowAI->ForeColor = System::Drawing::SystemColors::ControlText;
-			this->chBoxFollowAI->Location = System::Drawing::Point(32, 208);
+			this->chBoxFollowAI->Location = System::Drawing::Point(32, 216);
 			this->chBoxFollowAI->Name = L"chBoxFollowAI";
 			this->chBoxFollowAI->Size = System::Drawing::Size(96, 17);
 			this->chBoxFollowAI->TabIndex = 19;
@@ -547,7 +547,7 @@ namespace CppCLRWinFormsProject {
 			this->AutoScaleDimensions = System::Drawing::SizeF(6, 13);
 			this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Font;
 			this->BackColor = System::Drawing::SystemColors::WindowFrame;
-			this->ClientSize = System::Drawing::Size(442, 669);
+			this->ClientSize = System::Drawing::Size(442, 449);
 			this->Controls->Add(this->chBoxFollowAI);
 			this->Controls->Add(this->chBoxMulticore);
 			this->Controls->Add(this->chBoxAsync);
@@ -561,7 +561,10 @@ namespace CppCLRWinFormsProject {
 			this->Controls->Add(this->launchBit64);
 			this->Controls->Add(this->launchBit32);
 			this->ForeColor = System::Drawing::SystemColors::ControlText;
+			this->FormBorderStyle = System::Windows::Forms::FormBorderStyle::FixedSingle;
+			this->MaximizeBox = false;
 			this->Name = L"Form1";
+			this->StartPosition = System::Windows::Forms::FormStartPosition::CenterScreen;
 			this->Text = L"TSLauncher";
 			this->panelDev->ResumeLayout(false);
 			this->panelDev->PerformLayout();
@@ -750,11 +753,10 @@ namespace CppCLRWinFormsProject {
 			strcat(buffer, catTemp);
 		}
 
-		printf("%s\n", buffer);
-		return;
+		//printf("%s\n", buffer);
+		//return;
 		system(buffer);
 	}
-	
 };
 }
 
